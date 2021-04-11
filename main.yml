@@ -1,0 +1,43 @@
+---
+- hosts: all
+  vars:
+    packages:
+      - squid
+      - httpd
+
+  tasks:
+    - name: add epel repository
+      dnf:
+        name: epel-release
+        state: present
+
+    - name: Ensure a list of packages installed
+      dnf:
+        name: ['squid-4.4-8.module_el8.3.0+623+2bb85980.2.x86_64','ansible-2.9.18-2.el8']
+        state: present
+
+    - name: list installed and available versions
+      dnf:
+        list: httpd
+      become: true
+      when: ansible_os_family == 'RedHat'
+      register: yum_output
+    - name: print available ruby versions
+      debug:
+        msg: "{{ item.version }}-{{ item.release }}"
+      loop: "{{ yum_output.results | selectattr('yumstate', 'equalto', 'available') | list }}"
+
+#    - debug: var=yum_output
+
+    - name: Ensure a list of packages NOT installed
+      dnf:
+        name: ['httpd']
+        state: absent
+    - name: Copy squid.conf file
+      copy:
+        src: squid.conf
+        dest: /etc/squid/squid.conf
+    - name: restart squid
+      service:
+        name: squid
+        state: restarted
